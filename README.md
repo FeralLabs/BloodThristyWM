@@ -1,0 +1,4 @@
+BloodThristyWM
+==============
+
+Window manager experiment
