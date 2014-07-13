@@ -19,7 +19,7 @@ EventsHandler::handleKeyPress(XEvent* event) {
 
 void
 EventsHandler::handleButtonPress(XEvent* event) {
-	if(event -> xbutton.subwindow != None) {
+	if(event -> xbutton.subwindow != None && event -> xbutton.state == Mod1Mask) {
 		XGrabPointer(mShared.display, event -> xbutton.subwindow, True,
 			PointerMotionMask|ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
 		XGetWindowAttributes(mShared.display, event -> xbutton.subwindow, &attributes);
@@ -62,11 +62,21 @@ void
 EventsHandler::Run() {
 	XSelectInput(mShared.display, mShared.RootWindow, KeyPressMask | StructureNotifyMask | ButtonPressMask);
 	
+
 	while (isRunning) {
 		XNextEvent(mShared.display, &event);
 		switch (event.type) {
 			case KeyPress:
 				handleKeyPress(&event);
+			break;
+			case ButtonPress:
+				handleButtonPress(&event);
+			break;
+			case ButtonRelease:
+				handleButtonRelease(&event);
+			break;
+			case MotionNotify:
+				handleMotion(&event);
 			break;
 		}
 	

@@ -17,6 +17,8 @@ struct Shared {
 
 	Window PanelWindow;
 
+	Colormap ColorMap;
+
 	unsigned long WhitePixel, BlackPixel;
 	
 	bool isRunning;
