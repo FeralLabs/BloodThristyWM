@@ -1,0 +1,76 @@
+#include "EventsHandler.hpp"
+
+EventsHandler::EventsHandler(Shared & shared, Keybindings KB) 
+	: isRunning(true), mShared(shared), mKeyBindings(KB)  {
+}
+
+void
+EventsHandler::handleKeyPress(XEvent* event) {
+	
+	std::string cmd = mKeyBindings.getCommand(
+		XLookupKeysym(&event->xkey, 0), 
+		event->xkey.state
+		);
+
+	if(cmd == "kill_btwm")
+		isRunning = false;
+	else if(cmd != "") executeCMD(cmd);
+}
+
+void
+EventsHandler::handleButtonPress(XEvent* event) {
+	if(event -> xbutton.subwindow != None) {
+		XGrabPointer(mShared.display, event -> xbutton.subwindow, True,
+			PointerMotionMask|ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
+		XGetWindowAttributes(mShared.display, event -> xbutton.subwindow, &attributes);
+
+		buttonEvent = event -> xbutton;
+	}
+}
+
+void
+EventsHandler::handleButtonRelease(XEvent* event) {
+	XUngrabPointer(mShared.display, CurrentTime);
+}
+
+void
+EventsHandler::handleMotion(XEvent* event) {
+	int xdiff, ydiff;
+	
+	while (XCheckTypedEvent(mShared.display, MotionNotify, event));
+	xdiff = event->xbutton.x_root - buttonEvent.x_root;
+	ydiff = event->xbutton.y_root - buttonEvent.y_root;
+
+	XMoveResizeWindow(mShared.display, event -> xmotion.window, 
+		attributes.x + (buttonEvent.button == 1 ? xdiff : 0),
+		attributes.y + (buttonEvent.button == 1 ? ydiff : 0),
+		MAX(1, attributes.width + (buttonEvent.button == 3 ? xdiff : 0)),
+		MAX(1, attributes.height +(buttonEvent.button == 3 ? ydiff : 0))
+		);
+}
+
+void
+EventsHandler::executeCMD (std::string cmd) {
+	if (!fork()) {
+		cmd = std::string("exec ") + cmd;
+		execl("/bin/sh", "/bin/sh", "-c", cmd.c_str(), NULL);
+		exit(1);
+	}
+}
+
+void
+EventsHandler::Run() {
+	XSelectInput(mShared.display, mShared.RootWindow, KeyPressMask | StructureNotifyMask | ButtonPressMask);
+	
+	while (isRunning) {
+		XNextEvent(mShared.display, &event);
+		switch (event.type) {
+			case KeyPress:
+				handleKeyPress(&event);
+			break;
+		}
+	
+	}
+
+	XCloseDisplay(mShared.display);
+}
