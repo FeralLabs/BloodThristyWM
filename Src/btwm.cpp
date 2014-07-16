@@ -2,6 +2,8 @@
 #include <X11/Xutil.h>
 
 #include <iostream>
+#include <string.h>
+#include <time.h>
 #include "Colors.hpp"
 #include "Keybindings.hpp"
 #include "EventsHandler.hpp"
@@ -35,15 +37,17 @@ createPanel(Shared * shared, Colors * Color)
 	shared -> PanelWindow = XCreateSimpleWindow(
 		shared->display, shared->RootWindow, 
 		0, 0, 
-		shared->ScreenSize.x, 21, 
+		shared->ScreenSize.x, 18, 
 		0, shared->WhitePixel, Color -> Get ("bgcolor").pixel);
 
 	XMapWindow(shared->display, shared->PanelWindow);
+	shared -> PanelGC = XCreateGC(shared->display, shared->PanelWindow, NIL, NULL);
 
-	GC gc = XCreateGC(shared->display, shared->RootWindow, NIL, NULL);
-	XSetForeground(shared->display, gc, Color -> Get("selected").pixel);
-	XDrawRectangle(shared->display, shared->PanelWindow, gc, 0, 0, 21, 40);
-	XFillRectangle(shared->display, shared->PanelWindow, gc, 0, 0, 21, 40);
+}
+
+void
+Temporary (XEvent * event) {
+
 }
 
 int
@@ -55,11 +59,14 @@ main(int argc, char const *argv[])
 	if(loadShared (&shared) != 0) 
 		return (3);
 
-	Colors * Color = new Colors(shared);
-	Color -> Define ("bgcolor", "#2c3e50");
-	Color -> Define ("selected", "#FF0000");
-	
-	createPanel(&shared, Color);
+	shared.Color = new Colors(shared);
+	shared.Color -> Define ("bgcolor",  	 "#111111");
+	shared.Color -> Define ("selected", 	 "#f22863");
+	shared.Color -> Define ("bgfg",			 "#fefefe");
+	shared.Color -> Define ("selected_text", "#555555");
+	shared 	     .  Font = XLoadQueryFont(shared . display,"-*-helvetica-*-r-*-*-10-*-*-*-*-*-*-*");
+
+	createPanel(&shared, shared.Color);
 
 	Keybindings mKeybindings;
 	
@@ -70,6 +77,40 @@ main(int argc, char const *argv[])
 	mKeybindings.Add(XK_q, 0x9, "kill_btwm");
 
 	EventsHandler * mEventsHandler = new EventsHandler(shared, mKeybindings);
+	
+	mEventsHandler -> Add(ButtonRelease, [] (XEvent * event, Shared & mShared) {
+		XUngrabPointer(mShared.display, CurrentTime);
+	});
+
+	mEventsHandler -> Add(KeyPress, [] (XEvent * event, Shared & mShared) {
+		XSetWindowBorder(mShared . display, event -> xkey . window, mShared . Color -> Get ("selected").pixel);
+		//XMoveResizeWindow(mShared . display, event -> xmaprequest . window, 200, 200, 0, 0);
+	});
+
+	mEventsHandler -> Add(Expose, [] (XEvent * event, Shared & mShared) {
+			XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("selected").pixel);
+
+			time_t rawtime;
+			rawtime = time(NULL);
+			struct tm * curtime = localtime(&rawtime);
+
+			char * Test = asctime(curtime);
+
+			XDrawRectangle(mShared.display, mShared.PanelWindow, mShared.PanelGC, 27, 0, 10, 50);
+			XFillRectangle(mShared.display, mShared.PanelWindow, mShared.PanelGC, 27, 0, 10, 50);
+			
+			XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("bgfg").pixel);
+			XSetFont(mShared.display, mShared.PanelGC, mShared.Font->fid);
+
+			//XDrawString(mShared.display, mShared.PanelWindow, mShared.PanelGC, 30, 13, Test, sizeof(Test) - 1);
+
+			XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("selected_text").pixel);
+			XDrawString(mShared.display, mShared.PanelWindow, mShared.PanelGC, mShared.ScreenSize.x - 150, 13, Test, strlen(Test) - 1);
+
+			XFlush(mShared.display);
+
+	});
+
 	mEventsHandler -> Run();
 
 	return 0;

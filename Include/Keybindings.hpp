@@ -25,5 +25,5 @@ public:
 	~Keybindings();
 private:
 	std::vector<Keybind> Container;
-	std::vector<std::pair <std::string, void (*)()> > ReservedKeybindings;
+	std::vector<std::pair <std::string, void(*)()> > ReservedKeybindings;
 };

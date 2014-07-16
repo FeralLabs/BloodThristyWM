@@ -1,4 +1,6 @@
 #include "EventsHandler.hpp"
+#include <iostream>
+#include <string.h>
 
 EventsHandler::EventsHandler(Shared & shared, Keybindings KB) 
 	: isRunning(true), mShared(shared), mKeyBindings(KB)  {
@@ -29,11 +31,6 @@ EventsHandler::handleButtonPress(XEvent* event) {
 }
 
 void
-EventsHandler::handleButtonRelease(XEvent* event) {
-	XUngrabPointer(mShared.display, CurrentTime);
-}
-
-void
 EventsHandler::handleMotion(XEvent* event) {
 	int xdiff, ydiff;
 	
@@ -59,21 +56,33 @@ EventsHandler::executeCMD (std::string cmd) {
 }
 
 void
+EventsHandler::Add(int where, handlerFunction * function) {
+	EventsHandler::handlers.push_back(std::make_pair(where, function));
+}
+
+void
+EventsHandler::RunHandlers() {
+	for (handlerContainer::iterator i = handlers.begin(); i != handlers.end(); ++i)
+		if((*i).first == event.type) {
+			((*i).second)(&event, mShared);
+		}
+}
+
+void
 EventsHandler::Run() {
-	XSelectInput(mShared.display, mShared.RootWindow, KeyPressMask | StructureNotifyMask | ButtonPressMask);
-	
+	XSelectInput(mShared.display, mShared.RootWindow, KeyPressMask | ExposureMask | StructureNotifyMask | ButtonPressMask);
 
 	while (isRunning) {
 		XNextEvent(mShared.display, &event);
+		RunHandlers();
 		switch (event.type) {
+			case Expose:
+			break;
 			case KeyPress:
 				handleKeyPress(&event);
 			break;
 			case ButtonPress:
 				handleButtonPress(&event);
-			break;
-			case ButtonRelease:
-				handleButtonRelease(&event);
 			break;
 			case MotionNotify:
 				handleMotion(&event);
