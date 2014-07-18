@@ -5,15 +5,20 @@
 
 #include "shared.h"
 
-#include <map>
+#include <vector>
+
+struct Client
+{
+	Window window;	
+};
 
 class Clients
 {
 public:
 	Clients(Shared &);
-	void Add(Window);
+	size_t Add(Window);
 	~Clients();
 private:
 	Shared 	mShared;
-	//std::map <Window> mClients;
+	std::vector <Client> mClients;
 };

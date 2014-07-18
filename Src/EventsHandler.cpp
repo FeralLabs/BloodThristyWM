@@ -70,13 +70,21 @@ EventsHandler::RunHandlers() {
 
 void
 EventsHandler::Run() {
-	XSelectInput(mShared.display, mShared.RootWindow, KeyPressMask | ExposureMask | StructureNotifyMask | ButtonPressMask);
+	XSelectInput(mShared.display, mShared.RootWindow, 
+		SubstructureRedirectMask|SubstructureNotifyMask|ButtonPressMask
+|EnterWindowMask|LeaveWindowMask|StructureNotifyMask|PropertyChangeMask|KeyPressMask);
 
 	while (isRunning) {
 		XNextEvent(mShared.display, &event);
 		RunHandlers();
+		std::cout << event.type << std::endl;
+		//std::cout << "ConfigureRequest is " << ConfigureRequest << std::endl;
+		std::cout << "RootWindow:" << mShared.RootWindow << std::endl;
+
 		switch (event.type) {
 			case Expose:
+			break;
+			case ConfigureRequest:
 			break;
 			case KeyPress:
 				handleKeyPress(&event);
@@ -86,6 +94,9 @@ EventsHandler::Run() {
 			break;
 			case MotionNotify:
 				handleMotion(&event);
+			break;
+			default:
+				std::cout << event.type << std::endl;
 			break;
 		}
 	

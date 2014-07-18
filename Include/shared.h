@@ -1,9 +1,17 @@
 #pragma once
 
+#include <vector>
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define NIL (0x0)
 
 class Colors;
+
+struct Client
+{
+	Window window;	
+};
+
 
 struct Dimension2D {
 	int x, y;
@@ -16,6 +24,7 @@ struct Shared {
 	int RootScreen;
 	
 	Colors *Color;
+	std::vector <Client> Clients;
 
 	XFontStruct *Font;
 
