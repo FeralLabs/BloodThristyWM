@@ -47,6 +47,24 @@ createPanel(Shared * shared, Colors * Color)
 
 }
 
+void remap(Shared & mShared) {
+	size_t count = mShared.Clients.size();
+
+	unsigned int x = 0 ;
+	for (std::vector<Client>::iterator i = mShared.Clients.begin(); i != mShared.Clients.end(); ++i)
+	{
+		std::cout << (*i).window;
+
+		XMoveResizeWindow(mShared.display, (*i).window, 
+			(mShared.ScreenSize.x / count) * (x), 
+			28, 
+			(mShared.ScreenSize.x / count),
+			(mShared.ScreenSize.y - 40)
+			);
+		x++;
+	}
+}
+
 void
 Temporary (XEvent * event, Shared & mShared) {
 	XClearWindow(mShared.display, mShared.PanelWindow);
@@ -100,6 +118,16 @@ main(int argc, char const *argv[])
 		XUngrabPointer(mShared.display, CurrentTime);
 	});
 
+	mEventsHandler -> Add(UnmapNotify, [] (XEvent * event, Shared & mShared) {
+		for (std::vector<Client>::iterator i = mShared.Clients.begin(); i != mShared.Clients.end(); ++i)
+			if((*i).window == event -> xunmap.window) {
+				mShared.Clients.erase(i);
+				break;
+			}
+
+		remap(mShared);
+	});
+
 
 	mEventsHandler -> Add(ConfigureRequest, [] (XEvent * event, Shared & mShared) {
 		std::cout << "Configuring Window " << event -> xconfigure . window << std::endl;
@@ -113,19 +141,7 @@ main(int argc, char const *argv[])
 
 		std::cout << "Elements:" << count << std::endl;
 
-		unsigned int x = 0 ;
-		for (std::vector<Client>::iterator i = mShared.Clients.begin(); i != mShared.Clients.end(); ++i)
-		{
-			std::cout << (*i).window;
-
-			XMoveResizeWindow(mShared.display, (*i).window, 
-				(mShared.ScreenSize.x / count) * (x), 
-				28, 
-				(mShared.ScreenSize.x / count),
-				(mShared.ScreenSize.y - 40)
-				);
-			x++;
-		}
+		remap(mShared);
 
 		XWindowChanges wc;
 		wc.width = (mShared.ScreenSize.x / count);
