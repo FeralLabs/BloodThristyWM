@@ -11,6 +11,10 @@
 #include "EventsHandler.hpp"
 #include "shared.h"
 
+#define GAP 10
+
+int selected = 2;
+
 int
 loadShared(Shared * shared) {
 	// Opens up the display
@@ -24,7 +28,7 @@ loadShared(Shared * shared) {
 	shared -> RootWindow   = DefaultRootWindow (shared->display);
 	
 	// Gets screensize (eg. 1024x768);
-	shared -> ScreenSize.y = DisplayHeight (shared->display, 0);
+	shared -> ScreenSize.y = DisplayHeight (shared->display, 0) - 18;
 	shared -> ScreenSize.x = DisplayWidth  (shared->display, 0);
 
 	shared -> BlackPixel   = BlackPixel(shared -> display, 0);
@@ -54,18 +58,18 @@ void remap(Shared & mShared) {
 		unsigned int x = 0 ;
 		for (std::vector<Client>::iterator i = mShared.Clients.begin(); i != mShared.Clients.end(); ++i)
 		{
-			if(x == count - 1) {
+			if(x == count - 1) { // master
 				XSetWindowBorder(mShared.display, (*i).window, mShared.Color -> Get ("selected").pixel);
-				XMoveResizeWindow(mShared.display, (*i).window, 5, 20, 
-					(mShared.ScreenSize.x - 10), 
-					(mShared.ScreenSize.y - (mShared.ScreenSize.y / 2) - 20));
+				XMoveResizeWindow(mShared.display, (*i).window, 0, 19, 
+					(mShared.ScreenSize.x - 2), 
+					(mShared.ScreenSize.y - (mShared.ScreenSize.y / 2) - 2));
 			} else {
-				XSetWindowBorder(mShared.display, (*i).window, mShared.Color -> Get ("selected_text").pixel);
+				XSetWindowBorder(mShared.display, (*i).window, mShared.Color -> Get ("selected").pixel);
 				XMoveResizeWindow(mShared.display, (*i).window, 
-					((mShared.ScreenSize.x / (count - 1)) * (x) + 5), 
-					mShared.ScreenSize.y / 2 + 10, 
-					((mShared.ScreenSize.x / (count - 1)) - 10),
-					(mShared.ScreenSize.y - (mShared.ScreenSize.y / 2) - 30)
+					mShared.ScreenSize.x / (count - 1) * (x), 
+					mShared.ScreenSize.y / 2 + 18, 
+					mShared.ScreenSize.x / (count - 1),
+					mShared.ScreenSize.y - (mShared.ScreenSize.y / 2)
 					);
 			}
 			
@@ -73,21 +77,40 @@ void remap(Shared & mShared) {
 		}
 	} else {
 		XSetWindowBorder(mShared.display,  (*mShared.Clients.begin()).window, mShared.Color -> Get ("selected").pixel);
-		XMoveResizeWindow(mShared.display, (*mShared.Clients.begin()).window, 5, 20, 
-			(mShared.ScreenSize.x - 10), 
-			(mShared.ScreenSize.y - 20));
+		XMoveResizeWindow(mShared.display, (*mShared.Clients.begin()).window, 0, 18, 
+			mShared.ScreenSize.x - 2, 
+			mShared.ScreenSize.y - 2);
 	} 
 }
 
 void
-drawBar (XEvent * event, Shared & mShared) {
+Temporary (XEvent * event, Shared & mShared) {
 	XClearWindow(mShared.display, mShared.PanelWindow);
 
-	XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("selected").pixel);
+	const char *  tags [] = {"Test 1", "Test 2", "Stuff", "Coding"};
 
-	XDrawRectangle(mShared.display, mShared.PanelWindow, mShared.PanelGC, 27, 0, 10, 50);
-	XFillRectangle(mShared.display, mShared.PanelWindow, mShared.PanelGC, 27, 0, 10, 50);
-	
+	for (int i = 0, x = 20; i <= 3; ++i)
+	{
+		unsigned int fontlen = XTextWidth(mShared.Font, tags[i], strlen(tags[i]));
+
+		XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("selected").pixel );
+		
+		if (i == selected - 1) {
+			XDrawRectangle(mShared.display, mShared.PanelWindow, mShared.PanelGC, x - 10, 0, fontlen + 20, 50);
+			XFillRectangle(mShared.display, mShared.PanelWindow, mShared.PanelGC, x - 10, 0, fontlen + 20, 50);
+		}
+
+		XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("selected_text").pixel);
+		XSetFont(mShared.display, mShared.PanelGC, mShared.Font->fid);
+
+		XDrawString(mShared.display, mShared.PanelWindow, mShared.PanelGC, 
+			x, 
+			13, tags[i], strlen(tags[i]));
+
+		x += fontlen + 20;
+
+	}
+
 	XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("bgfg").pixel);
 	XSetFont(mShared.display, mShared.PanelGC, mShared.Font->fid);
 
@@ -111,9 +134,9 @@ main(int argc, char const *argv[])
 
 	shared.Color = new Colors(shared);
 	shared.Color -> Define ("bgcolor",  	 "#000");
-	shared.Color -> Define ("selected", 	 "#f22863");
+	shared.Color -> Define ("selected", 	 "#34aadc");
 	shared.Color -> Define ("bgfg",			 "#fefefe");
-	shared.Color -> Define ("selected_text", "#555555");
+	shared.Color -> Define ("selected_text", "#ffffff");
 	shared 	     .  Font = XLoadQueryFont(shared . display,"-*-helvetica-*-r-*-*-10-*-*-*-*-*-*-*");
 
 	createPanel(&shared, shared.Color);
@@ -130,6 +153,13 @@ main(int argc, char const *argv[])
 	
 	mEventsHandler -> Add(ButtonRelease, [] (XEvent * event, Shared & mShared) {
 		XUngrabPointer(mShared.display, CurrentTime);
+	});
+
+	mEventsHandler -> Add(KeyPress, [] (XEvent * event, Shared & mShared) {
+		if((event -> xkey . keycode - 9) > 0 && (event -> xkey . keycode - 9) < 10 && (event -> xkey . state == Mod1Mask)) {
+			selected = (event -> xkey . keycode - 9);
+			Temporary(event, mShared);
+		}
 	});
 
 	mEventsHandler -> Add(UnmapNotify, [] (XEvent * event, Shared & mShared) {
@@ -161,7 +191,7 @@ main(int argc, char const *argv[])
 	});
 
 	mEventsHandler -> Add(MapRequest, [] (XEvent * event, Shared & mShared) {
-		XSetWindowBorder(mShared . display, event -> xmaprequest . window, mShared . Color -> Get ("selected").pixel);
+		//XSetWindowBorder(mShared . display, event -> xmaprequest . window, mShared . Color -> Get ("selected").pixel);
 		XMapWindow(mShared . display, event -> xmaprequest . window);
 		XSync(mShared . display, False);
 	});
@@ -176,11 +206,11 @@ main(int argc, char const *argv[])
 		remap(mShared);
 	});
 
-	mEventsHandler -> Add(CreateNotify, *drawBar);
-	mEventsHandler -> Add(MapRequest, *drawBar);
-	mEventsHandler -> Add(Expose, *drawBar);
-	mEventsHandler -> Add(PropertyNotify, *drawBar);
-	mEventsHandler -> Add(DestroyNotify, *drawBar);
+	mEventsHandler -> Add(CreateNotify, *Temporary);
+	mEventsHandler -> Add(MapRequest, *Temporary);
+	mEventsHandler -> Add(Expose, *Temporary);
+	mEventsHandler -> Add(PropertyNotify, *Temporary);
+	mEventsHandler -> Add(DestroyNotify, *Temporary);
 
 	mEventsHandler -> Run();
 
