@@ -9,7 +9,9 @@ class Colors;
 
 struct Client
 {
-	Window window;	
+	Window window;
+	bool   isMaster;	
+
 };
 
 

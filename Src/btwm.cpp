@@ -50,23 +50,37 @@ createPanel(Shared * shared, Colors * Color)
 void remap(Shared & mShared) {
 	size_t count = mShared.Clients.size();
 
-	unsigned int x = 0 ;
-	for (std::vector<Client>::iterator i = mShared.Clients.begin(); i != mShared.Clients.end(); ++i)
-	{
-		std::cout << (*i).window;
-
-		XMoveResizeWindow(mShared.display, (*i).window, 
-			(mShared.ScreenSize.x / count) * (x), 
-			28, 
-			(mShared.ScreenSize.x / count),
-			(mShared.ScreenSize.y - 40)
-			);
-		x++;
-	}
+	if (count != 1) {
+		unsigned int x = 0 ;
+		for (std::vector<Client>::iterator i = mShared.Clients.begin(); i != mShared.Clients.end(); ++i)
+		{
+			if(x == count - 1) {
+				XSetWindowBorder(mShared.display, (*i).window, mShared.Color -> Get ("selected").pixel);
+				XMoveResizeWindow(mShared.display, (*i).window, 5, 20, 
+					(mShared.ScreenSize.x - 10), 
+					(mShared.ScreenSize.y - (mShared.ScreenSize.y / 2) - 20));
+			} else {
+				XSetWindowBorder(mShared.display, (*i).window, mShared.Color -> Get ("selected_text").pixel);
+				XMoveResizeWindow(mShared.display, (*i).window, 
+					((mShared.ScreenSize.x / (count - 1)) * (x) + 5), 
+					mShared.ScreenSize.y / 2 + 10, 
+					((mShared.ScreenSize.x / (count - 1)) - 10),
+					(mShared.ScreenSize.y - (mShared.ScreenSize.y / 2) - 30)
+					);
+			}
+			
+			x++;
+		}
+	} else {
+		XSetWindowBorder(mShared.display,  (*mShared.Clients.begin()).window, mShared.Color -> Get ("selected").pixel);
+		XMoveResizeWindow(mShared.display, (*mShared.Clients.begin()).window, 5, 20, 
+			(mShared.ScreenSize.x - 10), 
+			(mShared.ScreenSize.y - 20));
+	} 
 }
 
 void
-Temporary (XEvent * event, Shared & mShared) {
+drawBar (XEvent * event, Shared & mShared) {
 	XClearWindow(mShared.display, mShared.PanelWindow);
 
 	XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("selected").pixel);
@@ -128,46 +142,45 @@ main(int argc, char const *argv[])
 		remap(mShared);
 	});
 
-
 	mEventsHandler -> Add(ConfigureRequest, [] (XEvent * event, Shared & mShared) {
 		std::cout << "Configuring Window " << event -> xconfigure . window << std::endl;
 
 		Client Current;
 		Current.window = event -> xconfigure . window;
-		
+		Current.isMaster = true;
 		mShared.Clients . push_back(Current);
 
-		size_t count = mShared.Clients.size();
-
-		std::cout << "Elements:" << count << std::endl;
+		XWindowChanges values;
+		values.border_width = 1;
+		XConfigureWindow(mShared.display, event -> xconfigure . window, CWBorderWidth, &values);
 
 		remap(mShared);
 
-		XWindowChanges wc;
-		wc.width = (mShared.ScreenSize.x / count);
-		wc.x = wc.width * (count - 1);
-		wc.y = 28;
-		wc.border_width = 1;
-		wc.height = (mShared.ScreenSize.y - 40);
-
 		XSelectInput(mShared.display, event -> xconfigure . window, KeyPressMask | ButtonReleaseMask );
-
-		XConfigureWindow(mShared.display, event -> xconfigure . window, CWX | CWY | CWBorderWidth | CWWidth | CWHeight, &wc);
-
     	XSync(mShared . display, False);
 	});
 
 	mEventsHandler -> Add(MapRequest, [] (XEvent * event, Shared & mShared) {
-		std::cout << "Doin some mapping" << event -> xmaprequest . window << std::endl;
 		XSetWindowBorder(mShared . display, event -> xmaprequest . window, mShared . Color -> Get ("selected").pixel);
 		XMapWindow(mShared . display, event -> xmaprequest . window);
 		XSync(mShared . display, False);
 	});
 
-	mEventsHandler -> Add(CreateNotify, *Temporary);
-	mEventsHandler -> Add(MapRequest, *Temporary);
-	mEventsHandler -> Add(Expose, *Temporary);
-	mEventsHandler -> Add(PropertyNotify, *Temporary);
+	mEventsHandler -> Add(DestroyNotify, [] (XEvent * event, Shared & mShared) {
+		for (std::vector<Client>::iterator i = mShared.Clients.begin(); i != mShared.Clients.end(); ++i)
+			if((*i).window == event -> xdestroywindow.window) {
+				mShared.Clients.erase(i);
+				break;
+			}
+
+		remap(mShared);
+	});
+
+	mEventsHandler -> Add(CreateNotify, *drawBar);
+	mEventsHandler -> Add(MapRequest, *drawBar);
+	mEventsHandler -> Add(Expose, *drawBar);
+	mEventsHandler -> Add(PropertyNotify, *drawBar);
+	mEventsHandler -> Add(DestroyNotify, *drawBar);
 
 	mEventsHandler -> Run();
 

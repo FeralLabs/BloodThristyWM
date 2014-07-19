@@ -16,7 +16,9 @@ EventsHandler::handleKeyPress(XEvent* event) {
 
 	if(cmd == "kill_btwm")
 		isRunning = false;
-	else if(cmd != "") executeCMD(cmd);
+	else 
+		if (cmd != "") 
+			executeCMD(cmd);
 }
 
 void
@@ -35,14 +37,15 @@ EventsHandler::handleMotion(XEvent* event) {
 	int xdiff, ydiff;
 	
 	while (XCheckTypedEvent(mShared.display, MotionNotify, event));
+	
 	xdiff = event->xbutton.x_root - buttonEvent.x_root;
 	ydiff = event->xbutton.y_root - buttonEvent.y_root;
 
 	XMoveResizeWindow(mShared.display, event -> xmotion.window, 
 		attributes.x + (buttonEvent.button == 1 ? xdiff : 0),
 		attributes.y + (buttonEvent.button == 1 ? ydiff : 0),
-		MAX(1, attributes.width + (buttonEvent.button == 3 ? xdiff : 0)),
-		MAX(1, attributes.height +(buttonEvent.button == 3 ? ydiff : 0))
+		MAX(1, attributes.width  + (buttonEvent.button == 3 ? xdiff : 0)),
+		MAX(1, attributes.height + (buttonEvent.button == 3 ? ydiff : 0))
 		);
 }
 
@@ -77,9 +80,9 @@ EventsHandler::Run() {
 	while (isRunning) {
 		XNextEvent(mShared.display, &event);
 		RunHandlers();
-		std::cout << event.type << std::endl;
+		//std::cout << event.type << std::endl;
 		//std::cout << "ConfigureRequest is " << ConfigureRequest << std::endl;
-		std::cout << "RootWindow:" << mShared.RootWindow << std::endl;
+		//std::cout << "RootWindow:" << mShared.RootWindow << std::endl;
 
 		switch (event.type) {
 			case Expose:
