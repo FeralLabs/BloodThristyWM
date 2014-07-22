@@ -15,6 +15,14 @@
 
 int selected = 2;
 
+void
+add_tag (Shared & mShared, const char * a) {
+	Tag temp;
+	temp.Name = a;
+
+	mShared.Tags.push_back(temp);
+}
+
 int
 loadShared(Shared * shared) {
 	// Opens up the display
@@ -28,7 +36,7 @@ loadShared(Shared * shared) {
 	shared -> RootWindow   = DefaultRootWindow (shared->display);
 	
 	// Gets screensize (eg. 1024x768);
-	shared -> ScreenSize.y = DisplayHeight (shared->display, 0) - 18;
+	shared -> ScreenSize.y = DisplayHeight (shared->display, 0) - 15;
 	shared -> ScreenSize.x = DisplayWidth  (shared->display, 0);
 
 	shared -> BlackPixel   = BlackPixel(shared -> display, 0);
@@ -43,8 +51,8 @@ createPanel(Shared * shared, Colors * Color)
 	shared -> PanelWindow = XCreateSimpleWindow(
 		shared->display, shared->RootWindow, 
 		0, 0, 
-		shared->ScreenSize.x, 18, 
-		0, shared->WhitePixel, Color -> Get ("bgcolor").pixel);
+		shared->ScreenSize.x, 15, 
+		0, shared->WhitePixel, Color -> Get ("panel_background").pixel);
 
 	XMapWindow(shared->display, shared->PanelWindow);
 	shared -> PanelGC = XCreateGC(shared->display, shared->PanelWindow, NIL, NULL);
@@ -59,25 +67,22 @@ void remap(Shared & mShared) {
 		for (std::vector<Client>::iterator i = mShared.Clients.begin(); i != mShared.Clients.end(); ++i)
 		{
 			if(x == count - 1) { // master
-				XSetWindowBorder(mShared.display, (*i).window, mShared.Color -> Get ("selected").pixel);
-				XMoveResizeWindow(mShared.display, (*i).window, 0, 19, 
+				XMoveResizeWindow(mShared.display, (*i).window, 0, 15, 
 					(mShared.ScreenSize.x - 2), 
-					(mShared.ScreenSize.y - (mShared.ScreenSize.y / 2) - 2));
+					(mShared.ScreenSize.y - (mShared.ScreenSize.y / 2) - 1));
 			} else {
-				XSetWindowBorder(mShared.display, (*i).window, mShared.Color -> Get ("selected").pixel);
 				XMoveResizeWindow(mShared.display, (*i).window, 
 					mShared.ScreenSize.x / (count - 1) * (x), 
-					mShared.ScreenSize.y / 2 + 18, 
+					mShared.ScreenSize.y / 2 + 15, 
 					mShared.ScreenSize.x / (count - 1),
-					mShared.ScreenSize.y - (mShared.ScreenSize.y / 2)
+					mShared.ScreenSize.y - (mShared.ScreenSize.y / 2) - 2
 					);
 			}
 			
 			x++;
 		}
 	} else {
-		XSetWindowBorder(mShared.display,  (*mShared.Clients.begin()).window, mShared.Color -> Get ("selected").pixel);
-		XMoveResizeWindow(mShared.display, (*mShared.Clients.begin()).window, 0, 18, 
+		XMoveResizeWindow(mShared.display, (*mShared.Clients.begin()).window, 0, 15, 
 			mShared.ScreenSize.x - 2, 
 			mShared.ScreenSize.y - 2);
 	} 
@@ -87,39 +92,43 @@ void
 Temporary (XEvent * event, Shared & mShared) {
 	XClearWindow(mShared.display, mShared.PanelWindow);
 
-	const char *  tags [] = {"Test 1", "Test 2", "Stuff", "Coding"};
+	//const char *  tags [] = {"Test 1", "Test 2", "Stuff", "Coding"};
 
-	for (int i = 0, x = 20; i <= 3; ++i)
+	int x = 20;
+	for (std::vector<Tag>::iterator i = mShared.Tags.begin(); i != mShared.Tags.end(); ++i)
 	{
-		unsigned int fontlen = XTextWidth(mShared.Font, tags[i], strlen(tags[i]));
+		unsigned int fontlen = XTextWidth(mShared.Font, (*i).Name, strlen((*i).Name));
 
-		XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("selected").pixel );
+		XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("panel_selected").pixel );
 		
-		if (i == selected - 1) {
+		if ( (*i).Name == "Hacks" ) {
 			XDrawRectangle(mShared.display, mShared.PanelWindow, mShared.PanelGC, x - 10, 0, fontlen + 20, 50);
 			XFillRectangle(mShared.display, mShared.PanelWindow, mShared.PanelGC, x - 10, 0, fontlen + 20, 50);
+
+			XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("panel_selected_text").pixel);
+ 			XDrawString(mShared.display, mShared.PanelWindow, mShared.PanelGC, x, 11, (*i).Name, strlen((*i).Name));
+		} else {
+			XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("panel_full").pixel);
+			XSetFont(mShared.display, mShared.PanelGC, mShared.Font->fid);
+
+			XDrawString(mShared.display, mShared.PanelWindow, mShared.PanelGC, x, 11, (*i).Name, strlen((*i).Name)); 
 		}
-
-		XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("selected_text").pixel);
-		XSetFont(mShared.display, mShared.PanelGC, mShared.Font->fid);
-
-		XDrawString(mShared.display, mShared.PanelWindow, mShared.PanelGC, 
-			x, 
-			13, tags[i], strlen(tags[i]));
-
+		
 		x += fontlen + 20;
-
 	}
 
-	XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("bgfg").pixel);
-	XSetFont(mShared.display, mShared.PanelGC, mShared.Font->fid);
+
+	XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("panel_text").pixel);
+	XDrawString(mShared.display, mShared.PanelWindow, mShared.PanelGC, x, 11, "[bStack]", strlen("[bStack]"));
 
 	char *rootname;
 	int works = XFetchName (mShared.display, mShared.RootWindow, &rootname);
 
 	if(works) {
-		XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("selected_text").pixel);
-		XDrawString(mShared.display, mShared.PanelWindow, mShared.PanelGC, mShared.ScreenSize.x - 150, 13, rootname, strlen(rootname));
+		XSetForeground(mShared.display, mShared.PanelGC, (mShared.Color) -> Get("panel_text").pixel);
+		XDrawString(mShared.display, mShared.PanelWindow, 
+			mShared.PanelGC, 
+			mShared.ScreenSize.x - XTextWidth(mShared.Font, rootname, strlen(rootname)) - 20, 11, rootname, strlen(rootname));
 	}
 }
 
@@ -133,10 +142,12 @@ main(int argc, char const *argv[])
 		return (3);
 
 	shared.Color = new Colors(shared);
-	shared.Color -> Define ("bgcolor",  	 "#000");
-	shared.Color -> Define ("selected", 	 "#34aadc");
-	shared.Color -> Define ("bgfg",			 "#fefefe");
-	shared.Color -> Define ("selected_text", "#ffffff");
+	shared.Color -> Define ("panel_full",           "#dddddd");
+	shared.Color -> Define ("panel_background", 	"#080b0e");
+	shared.Color -> Define ("panel_selected",		"#ff9500");
+	shared.Color -> Define ("panel_text",	 		"#c7c7cc");
+	shared.Color -> Define ("panel_selected_text", 	"#ffffff");
+
 	shared 	     .  Font = XLoadQueryFont(shared . display,"-*-helvetica-*-r-*-*-10-*-*-*-*-*-*-*");
 
 	createPanel(&shared, shared.Color);
@@ -145,9 +156,13 @@ main(int argc, char const *argv[])
 	
 	mKeybindings.Add(XK_t, Mod1Mask, "terminator");
 	mKeybindings.Add(XK_p, Mod1Mask, "dmenu_run");
-	mKeybindings.Add(XK_w, Mod1Mask, "firefox");
+	mKeybindings.Add(XK_w, Mod1Mask, "midori");
 
 	mKeybindings.Add(XK_q, 0x9, "kill_btwm");
+
+	add_tag(shared, "Browser");
+	add_tag(shared, "Hacks");
+	add_tag(shared, "Terminals");
 
 	EventsHandler * mEventsHandler = new EventsHandler(shared, mKeybindings);
 	
@@ -156,11 +171,16 @@ main(int argc, char const *argv[])
 	});
 
 	mEventsHandler -> Add(KeyPress, [] (XEvent * event, Shared & mShared) {
-		if((event -> xkey . keycode - 9) > 0 && (event -> xkey . keycode - 9) < 10 && (event -> xkey . state == Mod1Mask)) {
+		if((event -> xkey . keycode - 9) > 0 && (event -> xkey . keycode - 9) < 5 && (event -> xkey . state == Mod4Mask)) {
 			selected = (event -> xkey . keycode - 9);
 			Temporary(event, mShared);
 		}
 	});
+
+	mEventsHandler -> Add(ConfigureNotify, [] (XEvent *event, Shared & mShared) {
+	 	if (!event -> xconfigure.override_redirect)
+	 		remap(mShared);
+ 	});
 
 	mEventsHandler -> Add(UnmapNotify, [] (XEvent * event, Shared & mShared) {
 		for (std::vector<Client>::iterator i = mShared.Clients.begin(); i != mShared.Clients.end(); ++i)
@@ -173,25 +193,25 @@ main(int argc, char const *argv[])
 	});
 
 	mEventsHandler -> Add(ConfigureRequest, [] (XEvent * event, Shared & mShared) {
-		std::cout << "Configuring Window " << event -> xconfigure . window << std::endl;
+		if(event -> xconfigure . window != None || !event -> xconfigure . override_redirect) {
+			Client Current;
+			Current.window = event -> xconfigure . window;
+			Current.isMaster = true;
+			mShared.Clients . push_back(Current);
 
-		Client Current;
-		Current.window = event -> xconfigure . window;
-		Current.isMaster = true;
-		mShared.Clients . push_back(Current);
+			XWindowChanges values;
+			values.border_width = 1;	
+			XConfigureWindow(mShared.display, event -> xconfigure . window, CWBorderWidth, &values);
 
-		XWindowChanges values;
-		values.border_width = 1;
-		XConfigureWindow(mShared.display, event -> xconfigure . window, CWBorderWidth, &values);
+			remap(mShared);
 
-		remap(mShared);
+			XSelectInput(mShared.display, event -> xconfigure . window, KeyPressMask | ButtonReleaseMask );
+		}
 
-		XSelectInput(mShared.display, event -> xconfigure . window, KeyPressMask | ButtonReleaseMask );
     	XSync(mShared . display, False);
 	});
 
-	mEventsHandler -> Add(MapRequest, [] (XEvent * event, Shared & mShared) {
-		//XSetWindowBorder(mShared . display, event -> xmaprequest . window, mShared . Color -> Get ("selected").pixel);
+	mEventsHandler -> Add(MapRequest, [] (XEvent * event, Shared & mShared){
 		XMapWindow(mShared . display, event -> xmaprequest . window);
 		XSync(mShared . display, False);
 	});

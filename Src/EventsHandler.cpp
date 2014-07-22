@@ -80,7 +80,8 @@ EventsHandler::Run() {
 	while (isRunning) {
 		XNextEvent(mShared.display, &event);
 		RunHandlers();
-		//std::cout << event.type << std::endl;
+		
+		std::cout << event.type << std::endl;
 		//std::cout << "ConfigureRequest is " << ConfigureRequest << std::endl;
 		//std::cout << "RootWindow:" << mShared.RootWindow << std::endl;
 
@@ -99,7 +100,7 @@ EventsHandler::Run() {
 				handleMotion(&event);
 			break;
 			default:
-				std::cout << event.type << std::endl;
+				//std::cout << event.type << std::endl;
 			break;
 		}
 	

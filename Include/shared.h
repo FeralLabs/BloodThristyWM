@@ -11,7 +11,11 @@ struct Client
 {
 	Window window;
 	bool   isMaster;	
+};
 
+struct Tag
+{
+	const char * Name;
 };
 
 
@@ -27,6 +31,7 @@ struct Shared {
 	
 	Colors *Color;
 	std::vector <Client> Clients;
+	std::vector <Tag>	Tags;
 
 	XFontStruct *Font;
 
